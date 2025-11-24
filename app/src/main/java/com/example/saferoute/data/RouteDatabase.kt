@@ -10,10 +10,16 @@ abstract class RouteDatabase : RoomDatabase() {
     abstract fun routeDao(): RouteDao
 
     companion object {
-        @Volatile private var INSTANCE: RouteDatabase? = null
+        @Volatile
+        private var INSTANCE: RouteDatabase? = null
+
         fun getDatabase(context: Context): RouteDatabase {
             return INSTANCE ?: synchronized(this) {
-                val instance = Room.databaseBuilder(context.applicationContext, RouteDatabase::class.java, "route_database").build()
+                val instance = Room.databaseBuilder(
+                    context.applicationContext,
+                    RouteDatabase::class.java,
+                    "route_database"
+                ).build()
                 INSTANCE = instance
                 instance
             }

@@ -10,15 +10,11 @@ object AuthManager {
 
     private val auth: FirebaseAuth by lazy { FirebaseAuth.getInstance() }
 
-    // Auth state helpers
     fun isUserSignedIn(): Boolean = auth.currentUser != null
     fun getCurrentUser(): FirebaseUser? = auth.currentUser
+    fun signOut() { auth.signOut() }
 
-    fun signOut() {
-        auth.signOut()
-    }
-
-    // Email & Password Auth
+    // Email Auth
     fun signInWithEmail(email: String, password: String, onResult: (Boolean, String?) -> Unit) {
         if (email.isBlank() || password.isBlank()) {
             onResult(false, "Email and password cannot be empty")
@@ -26,8 +22,7 @@ object AuthManager {
         }
         auth.signInWithEmailAndPassword(email, password)
             .addOnCompleteListener { task ->
-                if (task.isSuccessful) onResult(true, null)
-                else onResult(false, task.exception?.localizedMessage ?: "Login failed")
+                onResult(task.isSuccessful, task.exception?.localizedMessage)
             }
     }
 
@@ -38,12 +33,11 @@ object AuthManager {
         }
         auth.createUserWithEmailAndPassword(email, password)
             .addOnCompleteListener { task ->
-                if (task.isSuccessful) onResult(true, null)
-                else onResult(false, task.exception?.localizedMessage ?: "Registration failed")
+                onResult(task.isSuccessful, task.exception?.localizedMessage)
             }
     }
 
-    // Google Sign-in
+    // Google Sign-In
     fun getGoogleSignInClient(context: Context, webClientId: String): GoogleSignInClient {
         val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
             .requestIdToken(webClientId)
@@ -52,31 +46,24 @@ object AuthManager {
         return GoogleSignIn.getClient(context, gso)
     }
 
-    /**
-     * Force Google account picker every time
-     */
-    fun launchGoogleSignInWithPicker(
-        client: GoogleSignInClient,
-        onSignInIntentReady: (Intent) -> Unit
-    ) {
-        client.revokeAccess().addOnCompleteListener {
+    fun launchGoogleSignInWithPicker(client: GoogleSignInClient, onSignInIntentReady: (Intent) -> Unit) {
+        client.signOut().addOnCompleteListener { // ensures fresh picker
             onSignInIntentReady(client.signInIntent)
         }
     }
 
     fun handleGoogleSignInResult(data: Intent?, onResult: (Boolean, String?) -> Unit) {
         if (data == null) {
-            onResult(false, "Google sign-in failed: no data returned")
+            onResult(false, "Google sign-in failed: no data")
             return
         }
-
         try {
             val task = GoogleSignIn.getSignedInAccountFromIntent(data)
             val account = task.getResult(ApiException::class.java)
             if (account != null) {
                 firebaseAuthWithGoogle(account, onResult)
             } else {
-                onResult(false, "Google sign-in failed: account is null")
+                onResult(false, "Google sign-in account is null")
             }
         } catch (e: ApiException) {
             onResult(false, e.localizedMessage ?: "Google sign-in failed")
@@ -87,8 +74,7 @@ object AuthManager {
         val credential = GoogleAuthProvider.getCredential(account.idToken, null)
         auth.signInWithCredential(credential)
             .addOnCompleteListener { task ->
-                if (task.isSuccessful) onResult(true, null)
-                else onResult(false, task.exception?.localizedMessage ?: "Firebase authentication failed")
+                onResult(task.isSuccessful, task.exception?.localizedMessage)
             }
     }
 }

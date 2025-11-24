@@ -1,98 +1,22 @@
 package com.example.saferoute.screens
 
+import android.Manifest
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
-<<<<<<< HEAD
-import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-=======
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
->>>>>>> 9e9e2b4 (Sprint 2 – SafeRoute Authentication & Onboarding)
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-<<<<<<< HEAD
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import androidx.navigation.NavController
-import com.example.saferoute.AuthManager
-
-@Composable
-fun HomeScreen(navController: NavController) {
-    val gradient = Brush.horizontalGradient(listOf(Color(0xFFFF80AB), Color(0xFF7C4DFF)))
-
-    // Extract username from email
-    val userEmail = AuthManager.getCurrentUser()?.email
-    val userName = userEmail?.substringBefore("@") ?: "User"
-
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color.White)
-            .padding(16.dp)
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Column {
-                Text(
-                    "Hello, $userName!",
-                    fontSize = 22.sp,
-                    fontWeight = FontWeight.Bold
-                )
-                Spacer(modifier = Modifier.height(4.dp))
-                Text("Ready to travel safely?", fontSize = 16.sp, color = Color.Gray)
-            }
-
-            Button(
-                onClick = {
-                    AuthManager.signOut()
-                    navController.navigate("login") {
-                        popUpTo("home") { inclusive = true }
-                    }
-                },
-                shape = RoundedCornerShape(25.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF7E57C2)),
-                modifier = Modifier.height(40.dp)
-            ) {
-                Text("Logout", color = Color.White)
-            }
-        }
-
-        Spacer(modifier = Modifier.height(24.dp))
-
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(gradient, RoundedCornerShape(12.dp))
-                .padding(16.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            Text(
-                "Current Location: Banjara Hills, Hyderabad",
-                color = Color.White,
-                fontWeight = FontWeight.Bold,
-                textAlign = TextAlign.Center
-            )
-        }
-
-        Spacer(modifier = Modifier.height(24.dp))
-        FeatureCard("Plan Journey", "Safe routes ahead")
-        Spacer(modifier = Modifier.height(16.dp))
-        FeatureCard("Emergency SOS", "Quick help available")
-=======
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -106,7 +30,25 @@ fun HomeScreen(
     homeViewModel: HomeViewModel = viewModel()
 ) {
     val recentJourneys by homeViewModel.recentJourneys.collectAsState()
-    val gradient = Brush.horizontalGradient(listOf(Color(0xFF6A1B9A), Color(0xFFAB47BC)))
+    val gradient = Brush.horizontalGradient(
+        listOf(Color(0xFF6A1B9A), Color(0xFFAB47BC))
+    )
+
+    // Permission launcher
+    val locationPermissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (isGranted) {
+            homeViewModel.fetchLocation()
+        } else {
+            homeViewModel.setLocationStatus("Location Permission Denied")
+        }
+    }
+
+    // Request permission on first composition
+    LaunchedEffect(Unit) {
+        locationPermissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
+    }
 
     Scaffold(
         bottomBar = { BottomNavigationBar(navController) }
@@ -131,18 +73,20 @@ fun HomeScreen(
                         .padding(16.dp)
                 ) {
                     Text(
-                        "Hi ${homeViewModel.username}!",
+                        text = "Hi ${homeViewModel.username}!",
                         color = Color.White,
                         fontSize = 24.sp,
                         modifier = Modifier.align(Alignment.CenterStart)
                     )
+
                     Text(
-                        "Ready to travel safely today?",
+                        text = "Ready to travel safely today?",
                         color = Color.White.copy(alpha = 0.9f),
                         modifier = Modifier.align(Alignment.BottomStart)
                     )
+
                     Text(
-                        "Current Location: ${homeViewModel.currentLocation}",
+                        text = "Current Location: ${homeViewModel.currentLocation}",
                         color = Color.White.copy(alpha = 0.9f),
                         fontSize = 12.sp,
                         modifier = Modifier.align(Alignment.TopEnd)
@@ -152,7 +96,7 @@ fun HomeScreen(
 
             Spacer(modifier = Modifier.height(20.dp))
 
-            // Feature Cards Row
+            // Feature Cards
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(16.dp)
@@ -168,51 +112,27 @@ fun HomeScreen(
                     modifier = Modifier.weight(1f),
                     title = "Emergency SOS",
                     subtitle = "Quick Help",
-                    onClick = {},
+                    onClick = { /* TODO */ },
                     color = Color(0xFFD32F2F)
                 )
             }
 
             Spacer(modifier = Modifier.height(16.dp))
+
             Text("Recent Journeys", fontSize = 20.sp)
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Recent Journeys List
+            // List of recent journeys
             LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 items(recentJourneys) { route ->
                     RecentJourneyItem(route)
                 }
             }
         }
->>>>>>> 9e9e2b4 (Sprint 2 – SafeRoute Authentication & Onboarding)
     }
 }
 
 @Composable
-<<<<<<< HEAD
-fun FeatureCard(title: String, subtitle: String) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(100.dp),
-        shape = RoundedCornerShape(12.dp),
-        elevation = CardDefaults.cardElevation(4.dp)
-    ) {
-        Box(
-            modifier = Modifier.fillMaxSize(),
-            contentAlignment = Alignment.Center
-        ) {
-            Text(
-                "$title\n$subtitle",
-                fontWeight = FontWeight.Bold,
-                textAlign = TextAlign.Center,
-                color = Color.Black,
-                fontSize = 16.sp
-            )
-        }
-    }
-}
-=======
 fun FeatureCard(
     modifier: Modifier = Modifier,
     title: String,
@@ -248,6 +168,7 @@ fun RecentJourneyItem(route: Route) {
         route.safetyScore >= 50 -> Color(0xFFFFC107)
         else -> Color(0xFFF44336)
     }
+
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp)
@@ -262,7 +183,7 @@ fun RecentJourneyItem(route: Route) {
             Column {
                 Text("${route.start} → ${route.end}", fontSize = 16.sp)
                 Text(
-                    "Distance: ${route.distance} km, Duration: ${route.duration} min",
+                    "Distance: ${route.distance} km  |  Duration: ${route.duration} min",
                     fontSize = 12.sp
                 )
             }
@@ -283,27 +204,26 @@ fun BottomNavigationBar(navController: NavController) {
         NavigationBarItem(
             selected = true,
             onClick = { navController.navigate("home") },
-            icon = {},
+            icon = { Icon(Icons.Default.Home, contentDescription = "Home") },
             label = { Text("Home") }
         )
         NavigationBarItem(
             selected = false,
             onClick = { navController.navigate("journeyPlanner") },
-            icon = {},
+            icon = { Icon(Icons.Default.Place, contentDescription = "Map") },
             label = { Text("Map") }
         )
         NavigationBarItem(
             selected = false,
-            onClick = { /* Alert */ },
-            icon = {},
+            onClick = { /* TODO: navigate to alert */ },
+            icon = { Icon(Icons.Default.Warning, contentDescription = "Alert") },
             label = { Text("Alert") }
         )
         NavigationBarItem(
             selected = false,
-            onClick = { /* Profile */ },
-            icon = {},
+            onClick = { /* TODO: navigate to profile */ },
+            icon = { Icon(Icons.Default.Person, contentDescription = "Profile") },
             label = { Text("Profile") }
         )
     }
 }
->>>>>>> 9e9e2b4 (Sprint 2 – SafeRoute Authentication & Onboarding)

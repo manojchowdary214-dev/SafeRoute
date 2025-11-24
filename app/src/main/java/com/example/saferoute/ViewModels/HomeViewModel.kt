@@ -1,42 +1,54 @@
 package com.example.saferoute.ViewModels
 
+import android.Manifest
+import android.app.Application
+import android.location.Geocoder
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.core.content.ContextCompat
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.example.saferoute.data.Route
 import com.example.saferoute.data.RouteDao
-import com.example.saferoute.data.RouteEntity
+import com.google.android.gms.location.LocationServices
+import com.google.firebase.auth.FirebaseAuth
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import java.util.*
 
-// Simple User wrapper
-data class User(
-    val uid: String,
-    val name: String
-)
+class HomeViewModel(private val routeDao: RouteDao, application: Application) : AndroidViewModel(application) {
 
-class HomeViewModel(private val routeDao: RouteDao) : ViewModel() {
+    private val fusedLocation = LocationServices.getFusedLocationProviderClient(application)
+    private val auth: FirebaseAuth = FirebaseAuth.getInstance()
 
-    // Recent journeys as StateFlow
-    private val _recentJourneys = MutableStateFlow<List<Route>>(emptyList())
-    val recentJourneys: StateFlow<List<Route>> = _recentJourneys
-
-    // User info
     var username by mutableStateOf("User")
         private set
 
-    // Current location
-    var currentLocation by mutableStateOf("Unknown")
+    var currentLocation by mutableStateOf("Fetching location…")
         private set
 
+    private val _recentJourneys = MutableStateFlow<List<Route>>(emptyList())
+    val recentJourneys: StateFlow<List<Route>> = _recentJourneys
+
     init {
-        // Load recent journeys from DAO and map RouteEntity -> Route
+        loadUserName()
+        loadRecentRoutes()
+    }
+
+    private fun loadUserName() {
+        username = auth.currentUser?.displayName
+            ?: auth.currentUser?.email?.substringBefore("@")
+                    ?: "User"
+    }
+
+    private fun loadRecentRoutes() {
         viewModelScope.launch {
-            routeDao.getRecentRoutes().collect { entities: List<RouteEntity> ->
+            routeDao.getRecentRoutes().collect { entities ->
                 _recentJourneys.value = entities.map { entity ->
                     Route(
                         id = entity.id,
@@ -52,22 +64,43 @@ class HomeViewModel(private val routeDao: RouteDao) : ViewModel() {
         }
     }
 
-    // Load user info
-    fun loadUser(user: User) {
-        username = user.name
+    fun fetchLocation() {
+        val context = getApplication<Application>()
+        fusedLocation.lastLocation.addOnSuccessListener { location ->
+            if (location != null) {
+                getLocationName(location.latitude, location.longitude)
+            } else {
+                currentLocation = "Unable to fetch location"
+            }
+        }.addOnFailureListener {
+            currentLocation = "Unable to fetch location"
+        }
     }
 
-    // Update current location
-    fun updateLocation(location: String) {
-        currentLocation = location
+    private fun getLocationName(lat: Double, lon: Double) {
+        val context = getApplication<Application>()
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val geocoder = Geocoder(context, Locale.getDefault())
+                val result = geocoder.getFromLocation(lat, lon, 1)
+                currentLocation = result?.firstOrNull()?.locality
+                    ?: result?.firstOrNull()?.subLocality
+                            ?: "Unknown Location"
+            } catch (e: Exception) {
+                currentLocation = "Unknown Location"
+            }
+        }
     }
 
-    // ViewModel Factory for dependency injection
-    class Factory(private val routeDao: RouteDao) : ViewModelProvider.Factory {
+    fun setLocationStatus(status: String) {
+        currentLocation = status
+    }
+
+    class Factory(private val routeDao: RouteDao, private val application: Application) : ViewModelProvider.Factory {
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
             if (modelClass.isAssignableFrom(HomeViewModel::class.java)) {
                 @Suppress("UNCHECKED_CAST")
-                return HomeViewModel(routeDao) as T
+                return HomeViewModel(routeDao, application) as T
             }
             throw IllegalArgumentException("Unknown ViewModel class")
         }

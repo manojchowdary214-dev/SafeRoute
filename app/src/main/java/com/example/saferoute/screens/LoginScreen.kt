@@ -32,13 +32,11 @@ fun LoginScreen(navController: NavController) {
     val coroutineScope = rememberCoroutineScope()
     val context = LocalContext.current
 
-    // Google Sign-In client
     val googleClient: GoogleSignInClient = AuthManager.getGoogleSignInClient(
         context,
         "1029139051952-7n20gvls34dvse1k8a7tiojamhshbkge.apps.googleusercontent.com"
     )
 
-    // Launcher for Google Sign-In
     val launcher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartActivityForResult()
     ) { result ->
@@ -66,7 +64,6 @@ fun LoginScreen(navController: NavController) {
                 .fillMaxSize()
                 .padding(horizontal = 24.dp, vertical = 32.dp)
         ) {
-            // App Header
             Text(
                 text = "Safe Route",
                 fontSize = 32.sp,
@@ -81,7 +78,6 @@ fun LoginScreen(navController: NavController) {
             )
             Spacer(modifier = Modifier.height(32.dp))
 
-            // Email Field
             OutlinedTextField(
                 value = email.value,
                 onValueChange = { email.value = it },
@@ -92,7 +88,6 @@ fun LoginScreen(navController: NavController) {
             )
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Password Field
             OutlinedTextField(
                 value = password.value,
                 onValueChange = { password.value = it },
@@ -104,7 +99,6 @@ fun LoginScreen(navController: NavController) {
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // Email Login Button
             Button(
                 onClick = {
                     AuthManager.signInWithEmail(email.value, password.value) { success, msg ->
@@ -130,7 +124,6 @@ fun LoginScreen(navController: NavController) {
 
             Spacer(modifier = Modifier.height(20.dp))
 
-            // Separator
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.fillMaxWidth()
@@ -142,7 +135,6 @@ fun LoginScreen(navController: NavController) {
 
             Spacer(modifier = Modifier.height(20.dp))
 
-            // Google Sign-In Button
             OutlinedButton(
                 onClick = {
                     AuthManager.launchGoogleSignInWithPicker(googleClient) { intent ->
