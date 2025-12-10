@@ -3,11 +3,10 @@ package com.example.saferoute.ViewModels
 import android.app.Application
 import android.location.Location
 import androidx.lifecycle.AndroidViewModel
-import androidx.lifecycle.ViewModel
-import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.example.saferoute.data.RouteDao
 import com.example.saferoute.repo.FirebaseRepository
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -19,39 +18,52 @@ class LiveJourneyViewModel(
     private val routeId: String
 ) : AndroidViewModel(application) {
 
-    // Holds the current location of the user
-    private val _currentLocation = MutableStateFlow<Location?>(null)
-    val currentLocation: StateFlow<Location?> get() = _currentLocation
+    private val _routeProgress = MutableStateFlow(0)
+    val routeProgress: StateFlow<Int> = _routeProgress
 
-    /**
-     * Updates the current location and sends it to Firebase.
-     */
-    fun updateLocation(location: Location) {
-        _currentLocation.value = location
+    private var isJourneyActive = true
+
+    init {
+        simulateProgress()
+    }
+
+    // Journey progress
+    /** ---------------- Journey progress ---------------- **/
+    private fun simulateProgress() {
         viewModelScope.launch {
-            try {
-                firebaseRepository.updateUserLocation(routeId, location)
-            } catch (e: Exception) {
-                e.printStackTrace()
+            while (isJourneyActive && _routeProgress.value < 100) {
+                delay(1500)
+                _routeProgress.value += 5
             }
         }
     }
 
-    /**
-     * Factory class for creating LiveJourneyViewModel with parameters.
-     */
+    // Location update
+    /** ----------------Location Update ---------------- **/
+    fun updateLocation(location: Location) {
+        viewModelScope.launch {
+            firebaseRepository.updateUserLocation(routeId, location)
+        }
+    }
+
+    // Stop Journey
+    /** ---------------- Stop Journey---------------- **/
+    fun stopJourney() {
+        isJourneyActive = false
+        _routeProgress.value = 0
+    }
+
+    // Factory
+    /** ---------------- Factory ---------------- **/
     class Factory(
-        private val application: Application,
+        private val app: Application,
         private val routeDao: RouteDao,
         private val firebaseRepository: FirebaseRepository,
         private val routeId: String
-    ) : ViewModelProvider.Factory {
-        override fun <T : ViewModel> create(modelClass: Class<T>): T {
-            if (modelClass.isAssignableFrom(LiveJourneyViewModel::class.java)) {
-                @Suppress("UNCHECKED_CAST")
-                return LiveJourneyViewModel(application, routeDao, firebaseRepository, routeId) as T
-            }
-            throw IllegalArgumentException("Unknown ViewModel class")
+    ) : androidx.lifecycle.ViewModelProvider.Factory {
+        @Suppress("UNCHECKED_CAST")
+        override fun <T : androidx.lifecycle.ViewModel> create(modelClass: Class<T>): T {
+            return LiveJourneyViewModel(app, routeDao, firebaseRepository, routeId) as T
         }
     }
 }

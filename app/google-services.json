@@ -1,41 +1,33 @@
 {
   "project_info": {
-    "project_number": "1029139051952",
-    "project_id": "saferoute-9a405",
-    "storage_bucket": "saferoute-9a405.firebasestorage.app"
+    "project_number": "547604621626",
+    "project_id": "saferoute-28396",
+    "storage_bucket": "saferoute-28396.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:1029139051952:android:8d4356468e704d15095275",
+        "mobilesdk_app_id": "1:547604621626:android:5d9e923875652b9ea84803",
         "android_client_info": {
           "package_name": "com.example.saferoute"
         }
       },
       "oauth_client": [
         {
-          "client_id": "1029139051952-mpea8os6eoae8gpt00iqidga525aijh2.apps.googleusercontent.com",
-          "client_type": 1,
-          "android_info": {
-            "package_name": "com.example.saferoute",
-            "certificate_hash": "3fdac0a1123cd2a87a8a2ba499495e9ed7ed6ad3"
-          }
-        },
-        {
-          "client_id": "1029139051952-7n20gvls34dvse1k8a7tiojamhshbkge.apps.googleusercontent.com",
+          "client_id": "547604621626-th6388gd2oglgl73rubhrgjblnb2b09h.apps.googleusercontent.com",
           "client_type": 3
         }
       ],
       "api_key": [
         {
-          "current_key": "AIzaSyBZQs8IUi_xEUqKV1fdlhR0elay8QBkGUI"
+          "current_key": "AIzaSyBtFKwESqQFW3vMkZYFUPz7IgJgnj5gEGs"
         }
       ],
       "services": {
         "appinvite_service": {
           "other_platform_oauth_client": [
             {
-              "client_id": "1029139051952-7n20gvls34dvse1k8a7tiojamhshbkge.apps.googleusercontent.com",
+              "client_id": "547604621626-th6388gd2oglgl73rubhrgjblnb2b09h.apps.googleusercontent.com",
               "client_type": 3
             }
           ]

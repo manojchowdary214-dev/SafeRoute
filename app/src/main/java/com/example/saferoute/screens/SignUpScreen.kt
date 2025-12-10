@@ -20,7 +20,7 @@ import com.example.saferoute.AuthManager
 import kotlinx.coroutines.launch
 
 @Composable
-fun LoginScreen(navController: NavController) {
+fun RegisterScreen(navController: NavController) {
 
     // Email input
     var emailState by remember { mutableStateOf("") }
@@ -46,17 +46,16 @@ fun LoginScreen(navController: NavController) {
         // Centered card
         Column(
             modifier = Modifier
-                .fillMaxWidth()
+                .fillMaxWidth(0.9f)
                 .wrapContentHeight()
                 .background(Color.White, RoundedCornerShape(24.dp)) // Card style
                 .padding(32.dp)
                 .align(Alignment.Center),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-
             // Title
             Text(
-                "Safe Route",
+                "Create Account",
                 fontSize = 32.sp,
                 fontWeight = FontWeight.ExtraBold,
                 color = Color(0xFF4A148C)
@@ -85,17 +84,17 @@ fun LoginScreen(navController: NavController) {
             )
             Spacer(Modifier.height(24.dp))
 
-            // Login button
+            // Sign Up button
             Button(
                 onClick = {
-                    AuthManager.signInWithEmail(emailState, passwordState) { success, message ->
+                    AuthManager.registerWithEmail(emailState, passwordState) { success, message ->
                         scope.launch {
                             if (success) {
                                 navController.navigate("home") {
-                                    popUpTo("login") { inclusive = true }
+                                    popUpTo("register") { inclusive = true }
                                 }
                             } else {
-                                snackbarHostState.showSnackbar(message ?: "Login failed")
+                                snackbarHostState.showSnackbar(message ?: "Registration failed")
                             }
                         }
                     }
@@ -106,17 +105,15 @@ fun LoginScreen(navController: NavController) {
                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF6A1B9A)),
                 shape = RoundedCornerShape(25.dp)
             ) {
-                Text("Login", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                Text("Sign Up", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
             }
 
             Spacer(Modifier.height(16.dp))
 
-            // Register text
-            TextButton(
-                onClick = { navController.navigate("register") }
-            ) {
+            // Login redirect
+            TextButton(onClick = { navController.navigate("login") }) {
                 Text(
-                    "Don't have an account? Sign Up",
+                    "Already have an account? Login",
                     color = Color(0xFF6A1B9A),
                     fontSize = 14.sp
                 )

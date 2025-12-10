@@ -1,207 +1,197 @@
 package com.example.saferoute.screens
 
-import android.Manifest
-import android.content.pm.PackageManager
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
+import android.location.Geocoder
+import android.content.Context
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
-import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.saferoute.ViewModels.JourneyPlannerViewModel
-import com.example.saferoute.data.Route
 import com.example.saferoute.data.RouteDao
+import com.example.saferoute.data.RouteEntity
 import com.example.saferoute.repo.FirebaseRepository
-import com.google.android.gms.maps.model.CameraPosition
+import com.example.saferoute.utils.calculateDistanceKm
 import com.google.android.gms.maps.model.LatLng
-import com.google.maps.android.compose.GoogleMap
-import com.google.maps.android.compose.rememberCameraPositionState
-import androidx.core.content.ContextCompat
+import kotlinx.coroutines.launch
+import kotlin.math.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun JourneyPlannerScreen(
     navController: NavController,
     routeDao: RouteDao,
-    firebaseRepository: FirebaseRepository
+    firebaseRepository: FirebaseRepository,
+    modifier: Modifier = Modifier
 ) {
+    val scope = rememberCoroutineScope()
     val context = LocalContext.current
 
-    // Check location permission
-    var locationPermissionGranted by remember {
-        mutableStateOf(
-            ContextCompat.checkSelfPermission(
-                context, Manifest.permission.ACCESS_FINE_LOCATION
-            ) == PackageManager.PERMISSION_GRANTED
-        )
-    }
+    // start input
+    var start by remember { mutableStateOf("") }
 
-    val launcher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.RequestPermission()
-    ) { granted ->
-        locationPermissionGranted = granted
-    }
+    // end input
+    var end by remember { mutableStateOf("") }
 
-    // Request permission if not granted
-    LaunchedEffect(locationPermissionGranted) {
-        if (!locationPermissionGranted) {
-            launcher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
-        }
-    }
+    // routes list
+    var generatedRoutes by remember { mutableStateOf(listOf<RouteEntity>()) }
 
-    val viewModel: JourneyPlannerViewModel = viewModel(
-        factory = JourneyPlannerViewModel.Factory(routeDao, firebaseRepository)
-    )
-    val routes by viewModel.routes.collectAsState()
-
-    var fromLocation by remember { mutableStateOf(TextFieldValue("")) }
-    var toLocation by remember { mutableStateOf(TextFieldValue("")) }
+    // start/end latlng
+    var routeLatLng by remember { mutableStateOf<RouteLatLng?>(null) }
 
     Scaffold(
+        // TopBar
         topBar = {
-            TopAppBar(
-                title = { Text("Plan Your Journey") },
+            CenterAlignedTopAppBar(
+                title = { Text("Journey Planner", style = MaterialTheme.typography.titleLarge) },
                 navigationIcon = {
-                    IconButton(onClick = { navController.navigate("home") }) {
+                    // back arrow
+                    IconButton(onClick = { navController.popBackStack() }) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Back")
                     }
                 },
                 colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
-                    containerColor = Color(0xFF8E24AA),
-                    titleContentColor = Color.White
+                    containerColor = MaterialTheme.colorScheme.primaryContainer,
+                    titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer
                 )
             )
-        }
-    ) { padding ->
+        },
+        containerColor = MaterialTheme.colorScheme.background
+    ) { paddingValues ->
+
         Column(
-            modifier = Modifier
+            modifier = modifier
                 .fillMaxSize()
-                .padding(padding)
+                .padding(paddingValues)
                 .padding(16.dp)
         ) {
 
-            Text(
-                "Find the safest route to your destination",
-                color = Color.Gray
-            )
-
-            Spacer(modifier = Modifier.height(12.dp))
-
+            // update start
             OutlinedTextField(
-                value = fromLocation,
-                onValueChange = { fromLocation = it },
-                label = { Text("From") },
-                modifier = Modifier.fillMaxWidth()
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            OutlinedTextField(
-                value = toLocation,
-                onValueChange = { toLocation = it },
-                label = { Text("To") },
+                value = start,
+                onValueChange = { start = it },
+                label = { Text("Start Point") },
+                singleLine = true,
                 modifier = Modifier.fillMaxWidth()
             )
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(Modifier.height(12.dp))                       // spacing
+
+            // update end
+            OutlinedTextField(
+                value = end,
+                onValueChange = { end = it },
+                label = { Text("Destination") },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            Spacer(Modifier.height(20.dp))
 
             Button(
                 onClick = {
-                    if (fromLocation.text.isNotBlank() && toLocation.text.isNotBlank()) {
-                        viewModel.fetchRoutes(fromLocation.text, toLocation.text)
+                    scope.launch {
+
+                        // start geocode
+                        val fromLatLng = geocodeAddress(context, start)
+                        // end geocode
+                        val toLatLng = geocodeAddress(context, end)
+
+                        if (fromLatLng != null && toLatLng != null) {
+
+                            routeLatLng = RouteLatLng(fromLatLng, toLatLng)
+
+                            // calc distance
+                            val kmDistance = calculateDistanceKm(fromLatLng, toLatLng)
+                            // calc duration
+                            val durationMinutes = ((kmDistance / 5.0) * 60).toInt()
+
+                            val route = RouteEntity(
+                                id = System.currentTimeMillis().toString(),
+                                start = start,
+                                end = end,
+                                distance = kmDistance,
+                                duration = durationMinutes,
+                                safetyScore = (1..5).random(),
+                                timestamp = System.currentTimeMillis()
+                            )
+
+                            // save route
+                            routeDao.insertRoute(route)
+                            // update list
+                            generatedRoutes = listOf(route)
+                        }
                     }
                 },
-                modifier = Modifier.fillMaxWidth(),
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF8E24AA))
-            ) {
-                Text("Find Safe Route", color = Color.White)
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            if (locationPermissionGranted) {
-                // Map
-                val defaultLocation = LatLng(1.3521, 103.8198)
-                val cameraPositionState = rememberCameraPositionState {
-                    position = CameraPosition.fromLatLngZoom(defaultLocation, 12f)
-                }
-
-                GoogleMap(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(200.dp)
-                        .background(Color.LightGray),
-                    cameraPositionState = cameraPositionState
-                ) {
-                    // TODO: Add polylines for each route
-                }
-            } else {
-                Text(
-                    "Location permission required to show map",
-                    color = Color.Red,
-                    modifier = Modifier.padding(16.dp)
-                )
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // Show routes
-            LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                items(routes) { route ->
-                    RouteCard(route)
-                }
-            }
-        }
-    }
-}
-
-@Composable
-fun RouteCard(route: Route) {
-    val scoreColor = when {
-        route.safetyScore >= 80 -> Color(0xFF4CAF50)
-        route.safetyScore >= 50 -> Color(0xFFFFC107)
-        else -> Color(0xFFF44336)
-    }
-
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable { /* TODO: Navigate to RouteDetails */ },
-        shape = RoundedCornerShape(12.dp)
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Column {
-                Text("${route.start} → ${route.end}", style = MaterialTheme.typography.titleMedium)
-                Text(
-                    "Distance: ${route.distance} km | Duration: ${route.duration} min",
-                    style = MaterialTheme.typography.bodySmall
-                )
-            }
-            Box(
                 modifier = Modifier
-                    .background(scoreColor, RoundedCornerShape(8.dp))
-                    .padding(horizontal = 8.dp, vertical = 4.dp)
+                    .fillMaxWidth()
+                    .height(55.dp),
+                shape = MaterialTheme.shapes.medium
             ) {
-                Text("${route.safetyScore}/100", color = Color.White)
+                Text("Generate Route")
+            }
+
+            Spacer(Modifier.height(24.dp))
+
+            // Show mini map
+            routeLatLng?.let {
+                MapPreviewCard(
+                    // map start
+                    startLatLng = it.startLatLng,
+                    // map end
+                    endLatLng = it.endLatLng
+                )
+                Spacer(Modifier.height(24.dp))
+            }
+
+            LazyColumn(
+                verticalArrangement = Arrangement.spacedBy(16.dp),
+                modifier = Modifier.fillMaxSize()
+            ) {
+                items(generatedRoutes) { route ->
+
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = MaterialTheme.shapes.medium,
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceVariant
+                        ),
+                        elevation = CardDefaults.cardElevation(6.dp)
+                    ) {
+                        Column(Modifier.padding(16.dp)) {
+
+                            Text("From: ${route.start}", style = MaterialTheme.typography.bodyLarge) // from
+                            Text("To: ${route.end}", style = MaterialTheme.typography.bodyLarge)      // to
+                            Spacer(Modifier.height(6.dp))
+
+                            Text("Distance: ${"%.2f".format(route.distance)} km", style = MaterialTheme.typography.bodyMedium)
+                            Text("Duration: ${route.duration} mins", style = MaterialTheme.typography.bodyMedium)
+                            Text("Safety Score: ${route.safetyScore}", style = MaterialTheme.typography.bodyMedium)
+
+                            Spacer(Modifier.height(12.dp))
+
+                            Button(
+                                onClick = { navController.navigate("liveJourney/${route.id}") }, // start journey
+                                modifier = Modifier.align(Alignment.End),
+                                shape = MaterialTheme.shapes.small
+                            ) {
+                                Text("Start Journey")
+                            }
+                        }
+                    }
+                }
             }
         }
     }
 }
+
+data class RouteLatLng(
+    val startLatLng: LatLng,
+    val endLatLng: LatLng
+)

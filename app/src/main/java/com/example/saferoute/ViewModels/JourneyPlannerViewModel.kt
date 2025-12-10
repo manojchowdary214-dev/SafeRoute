@@ -1,39 +1,36 @@
 package com.example.saferoute.ViewModels
 
-import androidx.lifecycle.ViewModel
-import androidx.lifecycle.ViewModelProvider
+import android.app.Application
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.saferoute.data.Route
 import com.example.saferoute.data.RouteDao
 import com.example.saferoute.data.RouteEntity
 import com.example.saferoute.repo.FirebaseRepository
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
-import java.util.*
 
-class JourneyPlannerViewModel(private val routeDao: RouteDao, private val firebaseRepository: FirebaseRepository) : ViewModel() {
+class JourneyPlannerViewModel(
+    application: Application,
+    private val routeDao: RouteDao,                     // local dao
+    private val firebaseRepository: FirebaseRepository  // remote repo
+) : AndroidViewModel(application) {
 
-    private val _routes = MutableStateFlow<List<Route>>(emptyList())
-    val routes: StateFlow<List<Route>> = _routes
-
-    fun fetchRoutes(start: String, end: String) {
-        val safeRoute = Route(UUID.randomUUID().toString(), start, end, 5.0, 10, 90, System.currentTimeMillis())
-        val easyRoute = Route(UUID.randomUUID().toString(), start, end, 6.0, 8, 70, System.currentTimeMillis())
-        val list = listOf(safeRoute, easyRoute).sortedByDescending { it.safetyScore }
-
+    fun saveRoute(route: RouteEntity) {
         viewModelScope.launch {
-            list.forEach {
-                routeDao.insertRoute(RouteEntity(it.id, it.start, it.end, it.distance, it.duration, it.safetyScore, it.timestamp))
-                firebaseRepository.saveRoute(it)
-            }
-            _routes.value = list
+            // save locally
+            routeDao.insertRoute(route)
+            // save remotely
+            firebaseRepository.saveRoute(route)
         }
     }
 
-    class Factory(private val routeDao: RouteDao, private val firebaseRepository: FirebaseRepository) : ViewModelProvider.Factory {
-        override fun <T : ViewModel> create(modelClass: Class<T>): T {
-            return JourneyPlannerViewModel(routeDao, firebaseRepository) as T
+    class Factory(
+        private val routeDao: RouteDao,
+        private val firebaseRepository: FirebaseRepository,
+        private val app: Application
+    ) : androidx.lifecycle.ViewModelProvider.Factory {
+        override fun <T : androidx.lifecycle.ViewModel> create(modelClass: Class<T>): T {
+            // create viewmodel
+            return JourneyPlannerViewModel(app, routeDao, firebaseRepository) as T
         }
     }
 }

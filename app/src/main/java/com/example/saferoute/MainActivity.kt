@@ -3,28 +3,36 @@ package com.example.saferoute
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.material3.ExperimentalMaterial3Api
-import com.google.firebase.FirebaseApp
-import com.example.saferoute.data.RouteDatabase
+import com.example.saferoute.data.AppDatabase
 import com.example.saferoute.repo.FirebaseRepository
+import com.example.saferoute.ui.theme.SafeRouteTheme
+import com.example.saferoute.AppNavigation
 
-@ExperimentalMaterial3Api
 class MainActivity : ComponentActivity() {
+
+    private lateinit var firebaseRepository: FirebaseRepository
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
         // Initialize Firebase
-        FirebaseApp.initializeApp(this)
+        firebaseRepository = FirebaseRepository()
 
-        // Initialize Room DAO
-        val routeDao = RouteDatabase.getDatabase(applicationContext).routeDao()
-
-        // Initialize Firebase Repository
-        val firebaseRepository = FirebaseRepository()
-
-        // Set Compose content
         setContent {
-            AppNavigation(routeDao, firebaseRepository)
+            SafeRouteTheme {
+                val db = AppDatabase.getDatabase(applicationContext)
+                val routeDao = db.routeDao()
+                val feedbackDao = db.feedbackDao()
+                val sosDao = db.sosDao()
+
+                // App Navigation
+                AppNavigation(
+                    routeDao = routeDao,
+                    feedbackDao = feedbackDao,
+                    firebaseRepository = firebaseRepository,
+                    sosDao = sosDao
+                )
+            }
         }
     }
 }

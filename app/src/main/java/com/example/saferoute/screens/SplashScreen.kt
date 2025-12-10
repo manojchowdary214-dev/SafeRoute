@@ -23,22 +23,27 @@ import kotlinx.coroutines.delay
 fun SplashScreen(navController: NavController) {
 
     val gradient = Brush.verticalGradient(
-        listOf(Color(0xFFB3E5FC), Color(0xFFFCE4EC))
+        colors = listOf(Color(0xFFB3E5FC), Color(0xFFFCE4EC))
     )
 
     LaunchedEffect(Unit) {
-        delay(2000)
+        delay(2000) // Splash delay
 
-        val currentUser = AuthManager.getCurrentUser()
+        // Safely get current user
+        val currentUser = try {
+            AuthManager.getCurrentUser()
+        } catch (e: Exception) {
+            null
+        }
 
         if (currentUser != null) {
-            // User already logged in Go Home (remove splash)
             navController.navigate("home") {
                 popUpTo("splash") { inclusive = true }
             }
         } else {
-            // Not logged in Go Login (DON'T remove splash)
-            navController.navigate("login")
+            navController.navigate("login") {
+                popUpTo("splash") { inclusive = true }
+            }
         }
     }
 
@@ -52,10 +57,10 @@ fun SplashScreen(navController: NavController) {
             horizontalAlignment = Alignment.CenterHorizontally,
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(24.dp)
+                .padding(horizontal = 24.dp)
         ) {
 
-            // APP Logo
+            // App Logo
             Image(
                 painter = painterResource(id = R.drawable.app_logo),
                 contentDescription = "App Logo",
@@ -71,7 +76,7 @@ fun SplashScreen(navController: NavController) {
                 color = Color.Black
             )
 
-            // Sub-title
+            // Subtitle
             Text(
                 text = "Navigate Safely, Arrive Confidently",
                 fontSize = 16.sp,
@@ -80,6 +85,7 @@ fun SplashScreen(navController: NavController) {
 
             Spacer(modifier = Modifier.height(32.dp))
 
+            // Features row
             Row(
                 horizontalArrangement = Arrangement.SpaceEvenly,
                 modifier = Modifier.fillMaxWidth()
@@ -89,8 +95,9 @@ fun SplashScreen(navController: NavController) {
                 FeatureItem(R.drawable.contact, "Family Connect")
             }
 
-            Spacer(modifier = Modifier.height(62.dp))
+            Spacer(modifier = Modifier.height(48.dp))
 
+            // Footer text
             Text(
                 text = "Your safety is our priority",
                 fontSize = 14.sp,
