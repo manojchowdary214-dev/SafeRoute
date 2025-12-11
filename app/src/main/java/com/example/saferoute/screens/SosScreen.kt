@@ -61,7 +61,7 @@ fun SosScreen(
                         Icon(Icons.Default.ArrowBack, contentDescription = "Back")
                     }
                 },
-                colors = TopAppBarDefaults.mediumTopAppBarColors(containerColor = Color(0xFFB71C1C))
+                colors = TopAppBarDefaults.mediumTopAppBarColors(containerColor = Color(0xFFB71C1C)),
             )
         }
     ) { paddingValues ->

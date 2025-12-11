@@ -2,6 +2,8 @@ package com.example.saferoute.screens
 
 import android.location.Geocoder
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
@@ -40,26 +42,24 @@ fun FeedbackScreen(
     LaunchedEffect(route) {
         if (route != null) {
             scope.launch {
-                startLatLng = geocodeAddress(context, route.start) // geocode start
-                endLatLng = geocodeAddress(context, route.end)     // geocode end
+                startLatLng = geocodeAddress(context, route.start)
+                endLatLng = geocodeAddress(context, route.end)
             }
         }
     }
 
     Scaffold(
+        // TopApp Bar
         topBar = {
-            // Top Bar
             TopAppBar(
                 title = { Text("Route Feedback") },
                 navigationIcon = {
-                    // back arrow icon
                     IconButton(onClick = { navController.popBackStack() }) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Back")
                     }
                 },
                 actions = {
                     if (route != null) {
-                        // delete icon
                         IconButton(onClick = { showDeleteDialog = true }) {
                             Icon(Icons.Default.Delete, contentDescription = "Delete Route")
                         }
@@ -68,15 +68,20 @@ fun FeedbackScreen(
             )
         }
     ) { paddingValues ->
+
+        // Scroll State
+        val scrollState = rememberScrollState()
+
         Column(
             modifier = modifier
                 .fillMaxSize()
+                .verticalScroll(scrollState)
                 .padding(paddingValues)
                 .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)       // spacing
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
 
-            // Route Details Card
+            // Route Details
             route?.let {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
@@ -98,14 +103,12 @@ fun FeedbackScreen(
                 // Mini Map Preview
                 if (startLatLng != null && endLatLng != null) {
                     MapPreviewCard(
-                        // map start
                         startLatLng = startLatLng!!,
-                        // map end
                         endLatLng = endLatLng!!
                     )
                 }
 
-                // start journey
+                // Start Journey Button
                 Button(
                     onClick = { navController.navigate("liveJourney/${it.id}") },
                     modifier = Modifier.fillMaxWidth()
@@ -114,8 +117,9 @@ fun FeedbackScreen(
                 }
             }
 
-            // update rating
+            // Rating
             Text("Rating: ${rating.toInt()}", style = MaterialTheme.typography.bodyLarge)
+
             Slider(
                 value = rating,
                 onValueChange = { rating = it },
@@ -124,7 +128,7 @@ fun FeedbackScreen(
                 modifier = Modifier.fillMaxWidth()
             )
 
-            // update notes
+            // Notes
             OutlinedTextField(
                 value = notes,
                 onValueChange = { notes = it },
@@ -132,10 +136,10 @@ fun FeedbackScreen(
                 modifier = Modifier.fillMaxWidth()
             )
 
+            // Submit Button
             Button(
                 onClick = {
                     isSubmitting = true
-                    // submitting feedback
                     viewModel.submitFeedback(rating.toInt(), notes)
                     isSubmitting = false
                     navController.popBackStack()
@@ -143,12 +147,12 @@ fun FeedbackScreen(
                 enabled = !isSubmitting,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text(if (isSubmitting) "Submitting..." else "Submit")        // button text
+                Text(if (isSubmitting) "Submitting..." else "Submit")
             }
         }
     }
 
-    // DELETE DIALOG
+    // Delete Dialog
     if (showDeleteDialog && route != null) {
         AlertDialog(
             onDismissRequest = { showDeleteDialog = false },
@@ -156,17 +160,14 @@ fun FeedbackScreen(
             text = { Text("Are you sure you want to delete this route? This cannot be undone.") },
             confirmButton = {
                 TextButton(onClick = {
-                    // delete route
                     viewModel.deleteRoute(route.id)
                     showDeleteDialog = false
                     navController.popBackStack()
                 }) {
-                    // confirm text
                     Text("Delete")
                 }
             },
             dismissButton = {
-                // cancel text
                 TextButton(onClick = { showDeleteDialog = false }) {
                     Text("Cancel")
                 }

@@ -20,76 +20,77 @@ fun FeedbackListScreen(
     navController: NavController,
     viewModel: FeedbackListViewModel
 ) {
-    val feedbacks = viewModel.feedbacks.collectAsState().value  // observe feedbacks
+    val feedbacks = viewModel.feedbacks.collectAsState().value
 
     Scaffold(
-        // Top bar
+        // Top App Bar
         topBar = {
             CenterAlignedTopAppBar(
-                title = { Text("All Feedbacks", style = MaterialTheme.typography.titleLarge) },
+                title = { Text("All Feedbacks") },
                 navigationIcon = {
-                    IconButton(onClick = { navController.popBackStack() }) { // back nav
-                        // back arrow
+                    // Back Arrow
+                    IconButton(onClick = { navController.popBackStack() }) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Back")
                     }
                 },
-                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
+                colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.primaryContainer,
                     titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
                     navigationIconContentColor = MaterialTheme.colorScheme.onPrimaryContainer
                 )
             )
-        },
-        containerColor = MaterialTheme.colorScheme.background
+        }
     ) { paddingValues ->
 
-        Column(
+        LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
-                .padding(16.dp)
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
 
             if (feedbacks.isEmpty()) {
-                Text(
-                    "No feedbacks submitted yet.",                      // empty text
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onBackground
-                )
+                item {
+                    Text(
+                        "No feedbacks submitted yet.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onBackground
+                    )
+                }
             } else {
-                LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    items(feedbacks) { feedback ->
 
-                        Card(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable {
-                                    navController.navigate("feedback/${feedback.routeId}") // navigate
-                                },
-                            shape = MaterialTheme.shapes.medium,
-                            colors = CardDefaults.cardColors(
-                                containerColor = MaterialTheme.colorScheme.surfaceVariant
-                            ),
-                            elevation = CardDefaults.cardElevation(4.dp)
-                        ) {
-                            Column(modifier = Modifier.padding(16.dp)) {
-                                Text(
-                                    // route id
-                                    "Route ID: ${feedback.routeId}",
-                                    style = MaterialTheme.typography.bodyLarge
-                                )
-                                // rating
-                                Text(
-                                    "Rating: ${feedback.rating}",
-                                    style = MaterialTheme.typography.bodyMedium
-                                )
-                                // notes
-                                Text(
-                                    "Notes: ${feedback.notes ?: "-"}",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
+                items(feedbacks) { feedback ->
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                // Navigate to feedback
+                                navController.navigate("feedback/${feedback.routeId}")
+                            },
+                        shape = MaterialTheme.shapes.medium,
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceVariant
+                        ),
+                        elevation = CardDefaults.cardElevation(4.dp)
+                    ) {
+                        Column(Modifier.padding(16.dp)) {
+                            Text(
+                                // Route ID
+                                "Route ID: ${feedback.routeId}",
+                                style = MaterialTheme.typography.bodyLarge
+                            )
+                            Text(
+                                // FeedBack Rating
+                                "Rating: ${feedback.rating}",
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+                            Text(
+                                // Feedback Notes
+                                "Notes: ${feedback.notes ?: "-"}",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
                         }
                     }
                 }

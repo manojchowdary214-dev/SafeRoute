@@ -8,6 +8,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -17,20 +18,24 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.saferoute.ViewModels.HomeViewModel
 import com.example.saferoute.data.RouteEntity
+import kotlin.math.max
+import kotlin.math.roundToInt
 
 @Composable
 fun HomeScreen(
     navController: NavController,
     homeViewModel: HomeViewModel
 ) {
-    // Recent list
     val recentJourneys by homeViewModel.recentJourneys.collectAsState()
-    // Username
     val username = homeViewModel.username ?: "User"
 
     val gradient = Brush.horizontalGradient(
@@ -44,36 +49,112 @@ fun HomeScreen(
         else homeViewModel.setLocationStatus("Location Denied")
     }
 
-    // Ask permission
     LaunchedEffect(Unit) { permissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION) }
 
+    val listState = rememberLazyListState()
+
+    // Bottombar
     Scaffold(bottomBar = { HomeBottomBar(navController) }) { paddingValues ->
-        Column(
+        Box(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
-                .padding(16.dp)
         ) {
-            GreetingCard(username, homeViewModel, navController, gradient)
+            LazyColumn(
+                state = listState,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                item { GreetingCard(username, homeViewModel, navController, gradient) }
+                item { Spacer(Modifier.height(20.dp)) }
+                item { FeatureRow(navController) }
+                item { Spacer(Modifier.height(16.dp)) }
+                item { Text("Recent Journeys", fontSize = 20.sp) }
+                item { Spacer(Modifier.height(12.dp)) }
 
-            Spacer(Modifier.height(20.dp))
-
-            FeatureRow(navController)
-
-            Spacer(Modifier.height(16.dp))
-
-            // Title
-            Text("Recent Journeys", fontSize = 20.sp)
-            Spacer(Modifier.height(12.dp))
-
-            LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 items(recentJourneys) { route ->
                     RecentJourneyItem(route) {
-                        // Navigate feedback
                         navController.navigate("feedback/${route.id}")
                     }
                 }
+
+                item { Spacer(Modifier.height(50.dp)) }
             }
+
+            // Invisible Scrollbar
+            CustomVerticalScrollbar(
+                modifier = Modifier
+                    .align(Alignment.CenterEnd)
+                    .padding(end = 2.dp),
+                listState = listState,
+                thumbColor = Color.Transparent,
+                trackColor = Color.Transparent,
+                minThumbHeightDp = 0.dp,
+                width = 0.dp
+            )
+        }
+    }
+}
+
+@Composable
+fun CustomVerticalScrollbar(
+    modifier: Modifier = Modifier,
+    listState: androidx.compose.foundation.lazy.LazyListState,
+    thumbColor: Color,
+    trackColor: Color,
+    minThumbHeightDp: androidx.compose.ui.unit.Dp = 20.dp,
+    width: androidx.compose.ui.unit.Dp = 6.dp
+) {
+    var trackHeightPx by remember { mutableStateOf(0) }
+    val density = LocalDensity.current
+    val layoutInfo = listState.layoutInfo
+    val totalItems = layoutInfo.totalItemsCount
+    val visibleItems = layoutInfo.visibleItemsInfo.size
+
+    if (totalItems == 0 || visibleItems == 0) {
+        Box(
+            modifier = modifier
+                .width(width)
+                .fillMaxHeight()
+                .onGloballyPositioned { coords -> trackHeightPx = coords.size.height }
+        )
+        return
+    }
+
+    val firstVisibleIndex = listState.firstVisibleItemIndex
+    val visibleFraction = (visibleItems.toFloat() / max(1, totalItems).toFloat()).coerceIn(0f, 1f)
+    val thumbHeightPx = remember(trackHeightPx, visibleFraction) {
+        if (trackHeightPx == 0) 0 else max(
+            (with(density) { minThumbHeightDp.toPx() }).roundToInt(),
+            (visibleFraction * trackHeightPx).roundToInt()
+        )
+    }
+
+    val maxScrollIndex = max(0, totalItems - visibleItems)
+    val scrollProgress = if (maxScrollIndex == 0) 0f else (firstVisibleIndex.toFloat() / maxScrollIndex.toFloat())
+    val thumbOffsetPx = remember(trackHeightPx, thumbHeightPx, scrollProgress) {
+        if (trackHeightPx == 0) 0 else ((trackHeightPx - thumbHeightPx) * scrollProgress).roundToInt()
+    }
+
+    Box(
+        modifier = modifier
+            .width(width)
+            .fillMaxHeight()
+            .onGloballyPositioned { coords -> trackHeightPx = coords.size.height }
+            .background(trackColor, shape = RoundedCornerShape(4.dp)),
+        contentAlignment = Alignment.TopCenter
+    ) {
+        if (thumbHeightPx > 0 && trackHeightPx > 0) {
+            Box(
+                modifier = Modifier
+                    .offset { IntOffset(0, thumbOffsetPx) }
+                    .width(width)
+                    .height(with(density) { thumbHeightPx.toDp() })
+                    .background(thumbColor, shape = RoundedCornerShape(4.dp))
+                    .pointerInput(Unit) {}
+            )
         }
     }
 }
@@ -85,6 +166,7 @@ fun GreetingCard(
     navController: NavController,
     gradient: Brush
 ) {
+    // greet card
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -106,19 +188,18 @@ fun GreetingCard(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.Top
                 ) {
+                    // location
                     Text(
-                        // Small text
                         text = "Location: ${homeViewModel.currentLocation ?: "Unknown"}",
                         color = Color.White.copy(alpha = 0.9f),
                         fontSize = 13.sp
                     )
-
+                    // logout
                     Text(
                         text = "Logout",
                         color = Color.White,
                         fontSize = 14.sp,
                         modifier = Modifier.clickable {
-                            // Logout user
                             homeViewModel.signOut()
                             navController.navigate("login") {
                                 popUpTo("home") { inclusive = true }
@@ -126,10 +207,8 @@ fun GreetingCard(
                         }
                     )
                 }
-
-                // Greeting
+                // hi username
                 Text("Hi $username!", color = Color.White, fontSize = 26.sp)
-
                 Text(
                     "Ready to travel safely today?",
                     color = Color.White.copy(alpha = 0.9f),
@@ -143,10 +222,10 @@ fun GreetingCard(
 @Composable
 fun FeatureRow(navController: NavController) {
     Row(
-        // Space cards
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(16.dp)
     ) {
+        // Feature Cards
         FeatureCard(
             modifier = Modifier.weight(1f),
             title = "Plan Journey",
@@ -154,7 +233,6 @@ fun FeatureRow(navController: NavController) {
             onClick = { navController.navigate("journeyPlanner") },
             color = Color(0xFF8E24AA)
         )
-
         FeatureCard(
             modifier = Modifier.weight(1f),
             title = "Emergency SOS",
@@ -174,20 +252,17 @@ fun FeatureCard(
     color: Color
 ) {
     Card(
-        modifier = modifier
-            .height(120.dp)
-            .clickable { onClick() },
+        modifier = modifier.height(120.dp).clickable { onClick() },
         shape = RoundedCornerShape(16.dp)
     ) {
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(color) // Card color
+                .background(color)
                 .padding(16.dp),
             contentAlignment = Alignment.Center
         ) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                // Title
                 Text(title, color = Color.White, fontSize = 16.sp)
                 Text(subtitle, color = Color.White.copy(alpha = 0.8f), fontSize = 12.sp)
             }
@@ -197,43 +272,38 @@ fun FeatureCard(
 
 @Composable
 fun RecentJourneyItem(route: RouteEntity, onClick: () -> Unit) {
-
     val scoreColor = when {
-        route.safetyScore >= 80 -> Color(0xFF4CAF50) // Safe
-        route.safetyScore >= 50 -> Color(0xFFFFC107) // Medium
-        else -> Color(0xFFF44336) // Danger
+        route.safetyScore >= 80 -> Color(0xFF4CAF50)
+        route.safetyScore >= 50 -> Color(0xFFFFA000)
+        else -> Color(0xFFE53935)
     }
 
     Card(
-        // Clickable card
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable { onClick() },
-        shape = RoundedCornerShape(16.dp)
+        modifier = Modifier.fillMaxWidth().clickable { onClick() },
+        shape = RoundedCornerShape(16.dp),
+        elevation = CardDefaults.cardElevation(6.dp)
     ) {
         Row(
-            modifier = Modifier
-                .padding(16.dp)
-                .fillMaxWidth(),
+            modifier = Modifier.padding(16.dp).fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
             Column {
-                // Route text
-                Text("${route.start} → ${route.end}", fontSize = 16.sp)
+                Text("${route.start} → ${route.end}", style = MaterialTheme.typography.titleMedium)
+                // Distance
                 Text(
                     "Distance: ${route.distance} km | Duration: ${route.duration} min",
-                    fontSize = 12.sp
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
 
             Box(
                 modifier = Modifier
-                    .background(scoreColor, RoundedCornerShape(12.dp))
-                    .padding(8.dp)
+                    .background(scoreColor, RoundedCornerShape(14.dp))
+                    .padding(horizontal = 12.dp, vertical = 6.dp)
             ) {
-                // Score text
-                Text("${route.safetyScore}/100", color = Color.White)
+                Text("${route.safetyScore}/100", color = Color.White, style = MaterialTheme.typography.bodyMedium)
             }
         }
     }
@@ -241,38 +311,29 @@ fun RecentJourneyItem(route: RouteEntity, onClick: () -> Unit) {
 
 @Composable
 fun HomeBottomBar(navController: NavController) {
-
-    // Home nav
     NavigationBar {
+        // Home
         NavigationBarItem(
             selected = false,
             onClick = { navController.navigate("home") },
             icon = { Icon(Icons.Default.Home, contentDescription = "Home") },
             label = { Text("Home") }
         )
-
-        // SOS history
+        //sos history
         NavigationBarItem(
             selected = false,
             onClick = { navController.navigate("sosHistory") },
             icon = { Icon(Icons.Default.History, contentDescription = "SOS History") },
             label = { Text("SOS History") }
         )
-
-        // Restore list
+        //feedback text
         NavigationBarItem(
             selected = false,
-            onClick = {
-                navController.navigate("feedbackList") {
-                    launchSingleTop = true
-                    restoreState = true
-                }
-            },
+            onClick = { navController.navigate("feedbackList") { launchSingleTop = true; restoreState = true } },
             icon = { Icon(Icons.Default.Star, contentDescription = "Feedback") },
             label = { Text("Feedback") }
         )
-
-        // Reports nav
+        // Report text
         NavigationBarItem(
             selected = false,
             onClick = { navController.navigate("reports") },

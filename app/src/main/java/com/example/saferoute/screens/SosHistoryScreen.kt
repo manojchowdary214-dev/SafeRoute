@@ -22,7 +22,7 @@ fun SosHistoryScreen(
     sosRecords: List<SosRecord>,
     modifier: Modifier = Modifier,
     onAudioClick: (String) -> Unit = {},
-    onBackClick: () -> Unit = {} // back action
+    onBackClick: () -> Unit = {}
 ) {
     Scaffold(
         // top bar
@@ -30,10 +30,12 @@ fun SosHistoryScreen(
             TopAppBar(
                 title = { Text("SOS History") },
                 navigationIcon = {
+                    // Back Arrow
                     IconButton(onClick = onBackClick) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back") // back arrow
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
                     }
                 },
+                // Top bar colors
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.primaryContainer,
                     titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
@@ -68,16 +70,18 @@ fun SosHistoryScreen(
                                 Column(modifier = Modifier.padding(16.dp)) {
                                     Text("Message: ${record.message.ifBlank { "-" }}")
                                     Text(
+                                        // timestamp
                                         "Time: ${SimpleDateFormat("dd MMM yyyy, HH:mm", Locale.getDefault()).format(Date(record.timestamp))}",
-                                        style = MaterialTheme.typography.bodySmall      // timestamp
+                                        style = MaterialTheme.typography.bodySmall
                                     )
-                                    Text("Location: ${record.latitude ?: "-"}, ${record.longitude ?: "-"}") // location
+                                    // location
+                                    Text("Location: ${record.latitude ?: "-"}, ${record.longitude ?: "-"}")
                                     record.audioPath?.let { url ->
                                         Text(
                                             text = "▶ Play Audio",
-                                            color = MaterialTheme.colorScheme.primary, // audio text
+                                            color = MaterialTheme.colorScheme.primary,
                                             modifier = Modifier
-                                                .clickable { onAudioClick(url) }  // play audio
+                                                .clickable { onAudioClick(url) }
                                                 .padding(vertical = 4.dp)
                                         )
                                     }
